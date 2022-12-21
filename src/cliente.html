@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <meta charset="UTF-8">
+    <link rel="icon" href="data:,">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="estilos.css">
+
+    <title>Cliente</title>
+
+</head>
+
+<body>
+
+    <center>
+        <div id="tmp_notificacion"></div>
+        <div id="lum_notificacion"></div>
+    </center>
+
+    <form class="formulario" action="javascript:void(0);" onsubmit="javascript:sendTemperatura();">
+        <label for="temperatura">Temperatura:</label>
+        <input type="text" name="temperatura" id="temperatura" placeholder="Nivel de temperatura">
+        <input type="submit" value="Enviar temperatura">
+    </form>
+    <form class="formulario" action="javascript:void(0);" onsubmit="javascript:sendLuminosidad();">
+        <label for="luminosidad">Luminosidad:</label>
+        <input type="text" name="luminosidad" id="luminosidad" placeholder="Nivel de luminosidad">
+        <input type="submit" value="Enviar luminosidad">
+    </form>
+
+    <div id="info-sensores">
+        Temperatura:
+        <span id="temperaturaActual"></span><br><br> Luminosidad:
+        <span id="luminosidadActual"></span><br><br>Temperatura Máxima:
+        <span id="temperaturaMaxima"></span>ºC<br><br>Temperatura Mínima:
+        <span id="temperaturaMinima"></span>ºC<br><br>Luminosidad Máxima:
+        <span id="luminosidadMaxima"></span>ºC<br><br>Luminosidad Mínima:
+        <span id="luminosidadMinima"></span>ºC<br><br>Aire Acondicionado:
+        <span id="estadoAire"></span><br><br> Persianas:
+        <span id="estadoPersianas"></span><br><br>
+
+
+    </div>
+
+    <div id="botones">
+        <button onclick="change_persianas();">Abrir/Cerrar Persianas</button>
+        <button onclick="change_aire();">Apagar/Encender Aire Acondicionado</button>
+    </div>
+
+
+    <center><br><b><u>
+        <h1>NOTIFICACIONES</h1></b></u>
+        <br/></center>
+    <center>
+        <div id="resultados"></div>
+    </center>>
+
+
+
+
+</body>
+
+<script src="/socket.io/socket.io.js"></script>
+<script type="text/javascript">
+    function actualizarLista(usuarios) {
+        var listContainer = document.getElementById('resultados');
+        listContainer.innerHTML = '';
+        var listElement = document.createElement('ul');
+        listContainer.appendChild(listElement);
+        var num = usuarios.length;
+        for (var i = num - 1; i >= 0; i--) {
+            var listItem = document.createElement('li');
+            listItem.innerHTML = JSON.stringify(usuarios[i]);
+            listElement.appendChild(listItem);
+        }
+    }
+
+    function sendTemperatura() {
+        var tempe = document.getElementById("temperatura").value;
+        var d = new Date();
+        socket.emit('setTemp', {
+            temp: tempe,
+            time: d
+        });
+    }
+
+    function sendLuminosidad() {
+        var lumin = document.getElementById("luminosidad").value;
+        var d = new Date();
+        socket.emit('setLum', {
+            lum: lumin,
+            time: d
+        });
+    }
+
+    var serviceURL = document.URL;
+    var socket = io.connect(serviceURL);
+
+    socket.on('my-address', function(data) {
+        var d = new Date();
+        socket.emit('poner', {
+            host: data.host,
+            port: data.port,
+            time: d
+        });
+        socket.emit('obtener', {
+            host: data.address
+        });
+    });
+    socket.on('obtener', function(data) {
+        actualizarLista(data);
+    });
+    socket.on('disconnect', function() {
+        actualizarLista({});
+    });
+
+
+
+    socket.emit('getTemperatura');
+    socket.emit('getLuminosidad');
+    socket.emit('getAire');
+    socket.emit('getPersianas');
+    socket.emit('getTempMax');
+    socket.emit('getTempMin');
+    socket.emit('getLumMax');
+    socket.emit('getLumMin');
+
+    function change_persianas() {
+        socket.emit('changePersianas');
+    }
+
+    function change_aire() {
+        socket.emit('changeAire');
+    }
+
+    socket.on('actualizarTemperatura', function(data) {
+        var estado_temperatura = document.getElementById('temperaturaActual');
+        estado_temperatura.innerHTML = data;
+        socket.emit('obtener', {
+            host: data.address
+        });
+    });
+
+    socket.on('actualizarLuminosidad', function(data) {
+        var estado_luminosidad = document.getElementById('luminosidadActual');
+        estado_luminosidad.innerHTML = data;
+        socket.emit('obtener', {
+            host: data.address
+        });
+    });
+
+    socket.on('actualizarAire', function(data) {
+        var estado_aire = document.getElementById('estadoAire');
+        estado_aire.innerHTML = data;
+        socket.emit('obtener', {
+            host: data.address
+        });
+    });
+
+    socket.on('actualizarPersianas', function(data) {
+        var estado_persianas = document.getElementById('estadoPersianas');
+        estado_persianas.innerHTML = data;
+        socket.emit('obtener', {
+            host: data.address
+        });
+    });
+
+    socket.on('TemperaturaNotificacion', function(data) {
+        var alerta_temperatura = document.getElementById('tmp_notificacion');
+        alerta_temperatura.innerHTML = data.mensaje;
+    });
+
+    socket.on('LuminosidadNotificacion', function(data) {
+        var alerta_luminosidad = document.getElementById('lum_notificacion');
+        alerta_luminosidad.innerHTML = data.mensaje;
+    });
+
+    socket.on('tempMin', function(data) {
+        var temperatura_minima = document.getElementById('temperaturaMinima');
+        temperatura_minima.innerHTML = data;
+    });
+
+    socket.on('lumMin', function(data) {
+        var luminosidad_minima = document.getElementById('luminosidadMinima');
+        luminosidad_minima.innerHTML = data;
+    });
+
+    socket.on('tempMax', function(data) {
+        var temperatura_maxima = document.getElementById('temperaturaMaxima');
+        temperatura_maxima.innerHTML = data;
+    });
+
+    socket.on('lumMax', function(data) {
+        var luminosidad_maxima = document.getElementById('luminosidadMaxima');
+        luminosidad_maxima.innerHTML = data;
+    });
+</script>
+
+</html>
+
+</html>
